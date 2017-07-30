@@ -75,7 +75,7 @@ public class Point implements Comparable<Point> {
             return +0.0;
         }
         else {
-            return dx / dy;
+            return 1.0 * dy / dx;
         }
     }
 
@@ -158,7 +158,7 @@ public class Point implements Comparable<Point> {
         assert slope == 1.0;
 
         // Compare tests
-        assert p.compareTo(p) == 0;
+        assert p.compareTo(new Point(5, 5)) == 0;
         assert p.compareTo(new Point(5, 10)) < 0;
         assert p.compareTo(new Point(5, 0)) > 0;
         assert p.compareTo(new Point(10, 5)) < 0;
