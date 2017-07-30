@@ -17,22 +17,32 @@ public class FastCollinearPoints {
         validatePoints(points);
 
         Point[] pointsCopy = points.clone();
+        Point[] sortedPoints = points.clone();
+        Arrays.sort(pointsCopy);
         int pointsCount = pointsCopy.length;
 
-        for (int p = 0; p < pointsCount - 3; p++) {
+        for (Point point : pointsCopy) {
             // Order the points by their slope to P
-            Arrays.sort(pointsCopy, p + 1, pointsCount, pointsCopy[p].slopeOrder());
-            for (int i = p + 1; i < pointsCount - 2; i += 1) {
-                double slope1 = pointsCopy[p].slopeTo(pointsCopy[i]);
-                double slope2 = pointsCopy[p].slopeTo(pointsCopy[i + 1]);
-                double slope3 = pointsCopy[p].slopeTo(pointsCopy[i + 2]);
+            Arrays.sort(sortedPoints, point.slopeOrder());
+            // Start from the second point because the first is the point itself
+            for (int start = 1, end = 2; start < pointsCount - 2;) {
+                double slope = point.slopeTo(sortedPoints[start]);
 
-                if (Double.compare(slope1, slope2) == 0 && Double.compare(slope2, slope3) == 0) {
-                    Point[] foundPoints = new Point[] { pointsCopy[p], pointsCopy[i], pointsCopy[i + 1], pointsCopy[i + 2] };
-                    Arrays.sort(foundPoints);
-                    LineSegment lineSegment = new LineSegment(foundPoints[0], foundPoints[3]);
-                    lineSegments.add(lineSegment);
+                // While the next slope is equal to the initial do move right
+                while (end < pointsCount && Double.compare(slope, point.slopeTo(sortedPoints[end])) == 0) {
+                    end++;
                 }
+
+                // If found more than 3 points with the same slope then make a LineSegment
+                if ((end - start) >= 3) {
+                    Arrays.sort(sortedPoints, start, end);
+                    if (sortedPoints[start].compareTo(point) > 0) {
+                        this.lineSegments.add(new LineSegment(point, sortedPoints[end - 1]));
+                    }
+                }
+
+                start = end;
+                end++;
             }
         }
     }
