@@ -74,7 +74,7 @@ public class Board {
     }
 
     /**
-     * Calculate the Manhattan priority for the board (sum of Manhattan distances between blocks and goal)
+     * Calculate sum of Manhattan distances between blocks and goal
      * @return
      */
     public int manhattan() {
@@ -82,8 +82,8 @@ public class Board {
         for (int i = 0; i < this.blockCount; i++) {
             int value = this.blocks[i];
             if (value != 0) {
-                int hD = (i + 1 - value) % this.n;
-                int vD = (i + 1 - value) / this.n;
+                int hD = (i / this.n) - ((value - 1) / this.n);
+                int vD = (i % this.n) - ((value - 1) % this.n);
                 manhattan += Math.abs(hD) + Math.abs(vD);
             }
         }
@@ -112,7 +112,8 @@ public class Board {
 
         if (this.getRow() == 0) {
             swap(twinBlocks, this.blockCount - 2, this.blockCount - 1);
-        } else {
+        }
+        else {
             swap(twinBlocks, 0, 1);
         }
         return new Board(this.n, twinBlocks, this.pos);
@@ -142,6 +143,10 @@ public class Board {
 
         if (this == y) {
             return true;
+        }
+
+        if (!this.getClass().equals(y.getClass())) {
+            return false;
         }
 
         Board that = (Board) y;
@@ -284,5 +289,18 @@ public class Board {
 
         assert board.moveUp().moveDown().equals(board);
         assert board.moveLeft().moveRight().equals(board);
+
+        int[][] blocks1 = new int[][] {
+                { 1, 0 },
+                { 2, 3 }
+        };
+        Board board1 = new Board(blocks1);
+        System.out.println("Original:");
+        System.out.println(board);
+        System.out.println("Neighbors:");
+        for (Board neighbor : board1.neighbors()) {
+            System.out.println(neighbor);
+        }
+
     }
 }
