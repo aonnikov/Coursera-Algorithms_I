@@ -85,10 +85,16 @@ public class Solver {
 
         private final SearchNode parent;
 
+        private final int manhattan;
+
+        private final int hamming;
+
         public SearchNode(Board board, int step, SearchNode parent) {
             this.board = board;
             this.step = step;
             this.parent = parent;
+            this.manhattan = this.board.manhattan() + this.step;
+            this.hamming = this.board.hamming() + this.step;
         }
 
         public SearchNode next(Board next) {
@@ -104,11 +110,11 @@ public class Solver {
         }
 
         public int hammingPriority() {
-            return this.board.hamming() + this.step;
+            return this.hamming;
         }
 
         public int manhattanPriority() {
-            return this.board.manhattan() + this.step;
+            return this.manhattan;
         }
 
     }
