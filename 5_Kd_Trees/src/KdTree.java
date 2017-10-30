@@ -214,22 +214,34 @@ public class KdTree {
             nearestDistance = distance;
         }
 
+        KdNode subtree1;
+        KdNode subtree2;
+        boolean left = isLeft(node, point, horizontal);
+        if (left) {
+            subtree1 = node.left;
+            subtree2 = node.right;
+        }
+        else {
+            subtree1 = node.right;
+            subtree2 = node.left;
+        }
+
         // Search in left subtree
-        Point2D left = nearest(node.left, point, !horizontal, nearestDistance);
-        if (left != null) {
-            distance = left.distanceSquaredTo(point);
+        Point2D first = nearest(subtree1, point, !horizontal, nearestDistance);
+        if (first != null) {
+            distance = first.distanceSquaredTo(point);
             if (distance < nearestDistance) {
-                found = left;
+                found = first;
                 nearestDistance = distance;
             }
         }
 
         // Search in right subtree
-        Point2D right = nearest(node.right, point, !horizontal, nearestDistance);
-        if (right != null) {
-            distance = right.distanceSquaredTo(point);
+        Point2D second = nearest(subtree2, point, !horizontal, nearestDistance);
+        if (second != null) {
+            distance = second.distanceSquaredTo(point);
             if (distance < nearestDistance) {
-                found = right;
+                found = second;
             }
         }
 
@@ -321,15 +333,20 @@ public class KdTree {
         assert  tree.nearest(new Point2D(0.7, 0.2)).equals(point0);
 
         tree = new KdTree();
-        tree.insert(new Point2D(0.7, 0.2));
-        tree.insert(new Point2D(0.5, 0.4));
-        tree.insert(new Point2D(0.2, 0.3));
-        tree.insert(new Point2D(0.4, 0.7));
-        tree.insert(new Point2D(0.9, 0.6));
+        tree.insert(new Point2D(0.25, 0.75));
+        tree.insert(new Point2D(0.75, 0.00));
+        tree.insert(new Point2D(0.75, 1.00));
+        tree.insert(new Point2D(0.75, 0.25));
+        tree.insert(new Point2D(1.00, 0.00));
+        tree.insert(new Point2D(0.50, 0.25));
+        tree.insert(new Point2D(0.50, 0.75));
+        tree.insert(new Point2D(1.00, 0.50));
+        tree.insert(new Point2D(0.25, 0.50));
+        tree.insert(new Point2D(0.50, 0.50));
 
-        Point2D nearest = tree.nearest(new Point2D(0.016, 0.605));
+        Point2D nearest = tree.nearest(new Point2D(0.00, 0.50));
         System.out.println(nearest);
-        assert nearest.equals(new Point2D(0.2, 0.3));
+        assert nearest.equals(new Point2D(0.25, 0.50));
     }
 
 }
