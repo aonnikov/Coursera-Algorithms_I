@@ -1,4 +1,3 @@
-import com.sun.org.apache.regexp.internal.RE;
 import edu.princeton.cs.algs4.Point2D;
 import edu.princeton.cs.algs4.RectHV;
 import edu.princeton.cs.algs4.StdDraw;
@@ -79,7 +78,7 @@ public class KdTree {
         if (node == null) return new KdNode(point, rect);
 
         boolean left = isLeft(node, point, horizontal);
-        rect = rect(point, rect, left, horizontal);
+        rect = rect(node.point, rect, left, horizontal);
 
         if (left) node.left  = insert(node.left,  point, !horizontal, rect);
         else      node.right = insert(node.right, point, !horizontal, rect);
@@ -199,25 +198,42 @@ public class KdTree {
         if (point == null) throw new IllegalArgumentException("Point must be not null!");
         if (this.isEmpty()) return null;
 
-        return nearest(this.root, point, true);
+        return nearest(this.root, point, true, Double.MAX_VALUE);
     }
 
-    private Point2D nearest(KdNode node, Point2D point, boolean horizontal) {
+    private Point2D nearest(KdNode node, Point2D point, boolean horizontal, double nearestDistance) {
         if (node == null) return null;
 
-        boolean left = isLeft(node, point, horizontal);
+        double rectDistance = node.rect.distanceSquaredTo(point);
+        if (rectDistance >= nearestDistance) return null;
 
-        Point2D other;
-        if (left) other = nearest(node.left, point, !horizontal);
-        else other = nearest(node.right, point, !horizontal);
-
-        if (other != null) {
-            double d1 = node.point.distanceSquaredTo(point);
-            double d2 = other.distanceSquaredTo(point);
-            if (d2 < d1) return other;
+        Point2D found = null;
+        double distance = node.point.distanceSquaredTo(point);
+        if (distance < nearestDistance) {
+            found = node.point;
+            nearestDistance = distance;
         }
 
-        return node.point;
+        // Search in left subtree
+        Point2D left = nearest(node.left, point, !horizontal, nearestDistance);
+        if (left != null) {
+            distance = left.distanceSquaredTo(point);
+            if (distance < nearestDistance) {
+                found = left;
+                nearestDistance = distance;
+            }
+        }
+
+        // Search in right subtree
+        Point2D right = nearest(node.right, point, !horizontal, nearestDistance);
+        if (right != null) {
+            distance = right.distanceSquaredTo(point);
+            if (distance < nearestDistance) {
+                found = right;
+            }
+        }
+
+        return found;
     }
 
     /**
@@ -313,7 +329,7 @@ public class KdTree {
 
         Point2D nearest = tree.nearest(new Point2D(0.016, 0.605));
         System.out.println(nearest);
-        assert nearest.equals(new Point2D(0.2, 3));
+        assert nearest.equals(new Point2D(0.2, 0.3));
     }
 
 }
