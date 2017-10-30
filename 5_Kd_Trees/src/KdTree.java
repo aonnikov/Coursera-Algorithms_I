@@ -19,16 +19,13 @@ public class KdTree {
     private int size;
 
     private static class KdNode {
+
         private final Point2D point; // The point
-
-        private final RectHV rect; // The axis-aligned rectangle corresponding to this node
         private KdNode left;  // The left/bottom subtree
-
         private KdNode right; // The right/top subtree
 
-        public KdNode(Point2D point, RectHV rect) {
+        public KdNode(Point2D point) {
             this.point = point;
-            this.rect = rect;
         }
 
     }
@@ -63,7 +60,7 @@ public class KdTree {
     public void insert(Point2D p) {
         if (contains(p)) return;
 
-        this.root = this.insert(this.root, p, true, new RectHV(0, 0, 1, 1));
+        this.root = this.insert(this.root, p, true);
         this.size++;
     }
 
@@ -72,16 +69,14 @@ public class KdTree {
      * @param node the {@link KdNode}
      * @param point the {@link Point2D}
      * @param horizontal true if the orientation is horizontal
-     * @param rect the node rect
      */
-    private KdNode insert(KdNode node, Point2D point, boolean horizontal, RectHV rect) {
-        if (node == null) return new KdNode(point, rect);
+    private KdNode insert(KdNode node, Point2D point, boolean horizontal) {
+        if (node == null) return new KdNode(point);
 
         boolean left = isLeft(node, point, horizontal);
-        rect = rect(node.point, rect, left, horizontal);
 
-        if (left) node.left  = insert(node.left,  point, !horizontal, rect);
-        else      node.right = insert(node.right, point, !horizontal, rect);
+        if (left) node.left  = insert(node.left,  point, !horizontal);
+        else      node.right = insert(node.right, point, !horizontal);
 
         return node;
     }
@@ -122,33 +117,26 @@ public class KdTree {
         StdDraw.setPenRadius();
         StdDraw.rectangle(0.5, 0.5, 0.5, 0.5);
 
-        if (this.root != null) drawVNode(this.root);
+        if (this.root != null) drawNode(this.root, new RectHV(0.0, 0.0, 1.0, 1.0), true);
     }
 
-    private void drawVNode(KdNode node) {
+    private void drawNode(KdNode node, RectHV rect, boolean horizontal) {
         // Draw line
-        StdDraw.setPenColor(StdDraw.RED);
         StdDraw.setPenRadius();
-        StdDraw.line(node.point.x(), node.rect.ymin(), node.point.x(), node.rect.ymax());
+        if (horizontal) {
+            StdDraw.setPenColor(StdDraw.RED);
+            StdDraw.line(node.point.x(), rect.ymin(), node.point.x(), rect.ymax());
+        }
+        else {
+            StdDraw.setPenColor(StdDraw.BLUE);
+            StdDraw.line(rect.xmin(), node.point.y(), rect.xmax(), node.point.y());
+        }
 
         // Draw point
         drawPoint(node.point);
 
-        if (node.left != null) this.drawHNode(node.left);
-        if (node.right != null) this.drawHNode(node.right);
-    }
-
-    private void drawHNode(KdNode node) {
-        // Draw line
-        StdDraw.setPenColor(StdDraw.BLUE);
-        StdDraw.setPenRadius();
-        StdDraw.line(node.rect.xmin(), node.point.y(), node.rect.xmax(), node.point.y());
-
-        // Draw point
-        drawPoint(node.point);
-
-        if (node.left != null) this.drawVNode(node.left);
-        if (node.right != null) this.drawVNode(node.right);
+        if (node.left != null)  this.drawNode(node.left,  leftRect(node.point, rect,   horizontal), !horizontal);
+        if (node.right != null) this.drawNode(node.right, rightRect(node.point, rect, horizontal), !horizontal);
     }
 
     private void drawPoint(Point2D point) {
@@ -167,10 +155,10 @@ public class KdTree {
             throw new IllegalArgumentException("Rectangle must be not null!");
         }
 
-        return range(this.root, rect, new ArrayList<>(), true);
+        return range(this.root, rect, new RectHV(0.0, 0.0, 1.0, 1.0), true, new ArrayList<>());
     }
 
-    private Iterable<Point2D> range(KdNode node, RectHV rect, List<Point2D> points, boolean horizontal) {
+    private Iterable<Point2D> range(KdNode node, RectHV rect, RectHV nodeRect, boolean horizontal, List<Point2D> points) {
         if (node == null) return points;
 
         if (rect.contains(node.point)) {
@@ -178,12 +166,24 @@ public class KdTree {
         }
 
         if (horizontal) {
-            if (rect.xmin() < node.point.x())  range(node.left,  rect, points, !horizontal);
-            if (rect.xmax() >= node.point.x()) range(node.right, rect, points, !horizontal);
+            if (rect.xmin() < node.point.x()) {
+                nodeRect = leftRect(node.point, nodeRect, horizontal);
+                range(node.left,  rect, nodeRect, !horizontal, points);
+            }
+            if (rect.xmax() >= node.point.x()) {
+                nodeRect = rightRect(node.point, nodeRect, horizontal);
+                range(node.right, rect, nodeRect, !horizontal, points);
+            }
         }
         else {
-            if (rect.ymin() < node.point.y())  range(node.left,  rect, points, !horizontal);
-            if (rect.ymax() >= node.point.y()) range(node.right, rect, points, !horizontal);
+            if (rect.ymin() < node.point.y()) {
+                nodeRect = leftRect(node.point, nodeRect, horizontal);
+                range(node.left,  rect, nodeRect, !horizontal, points);
+            }
+            if (rect.ymax() >= node.point.y()) {
+                nodeRect = rightRect(node.point, nodeRect, horizontal);
+                range(node.right, rect, nodeRect, !horizontal, points);
+            }
         }
 
         return points;
@@ -198,13 +198,13 @@ public class KdTree {
         if (point == null) throw new IllegalArgumentException("Point must be not null!");
         if (this.isEmpty()) return null;
 
-        return nearest(this.root, point, true, Double.MAX_VALUE);
+        return nearest(this.root, point, new RectHV(0.0, 0.0, 1.0, 1.0), true, Double.MAX_VALUE);
     }
 
-    private Point2D nearest(KdNode node, Point2D point, boolean horizontal, double nearestDistance) {
+    private Point2D nearest(KdNode node, Point2D point, RectHV nodeRect, boolean horizontal, double nearestDistance) {
         if (node == null) return null;
 
-        double rectDistance = node.rect.distanceSquaredTo(point);
+        double rectDistance = nodeRect.distanceSquaredTo(point);
         if (rectDistance >= nearestDistance) return null;
 
         Point2D found = null;
@@ -216,18 +216,24 @@ public class KdTree {
 
         KdNode subtree1;
         KdNode subtree2;
+        RectHV rect1;
+        RectHV rect2;
         boolean left = isLeft(node, point, horizontal);
         if (left) {
             subtree1 = node.left;
             subtree2 = node.right;
+            rect1 = leftRect(node.point, nodeRect, horizontal);
+            rect2 = rightRect(node.point, nodeRect, horizontal);
         }
         else {
             subtree1 = node.right;
             subtree2 = node.left;
+            rect1 = rightRect(node.point, nodeRect, horizontal);
+            rect2 = leftRect(node.point, nodeRect, horizontal);
         }
 
         // Search in left subtree
-        Point2D first = nearest(subtree1, point, !horizontal, nearestDistance);
+        Point2D first = nearest(subtree1, point, rect1, !horizontal, nearestDistance);
         if (first != null) {
             distance = first.distanceSquaredTo(point);
             if (distance < nearestDistance) {
@@ -237,7 +243,7 @@ public class KdTree {
         }
 
         // Search in right subtree
-        Point2D second = nearest(subtree2, point, !horizontal, nearestDistance);
+        Point2D second = nearest(subtree2, point, rect2, !horizontal, nearestDistance);
         if (second != null) {
             distance = second.distanceSquaredTo(point);
             if (distance < nearestDistance) {
@@ -261,22 +267,27 @@ public class KdTree {
     }
 
     /**
-     * Returns the {@link RectHV} object for the node
+     * Returns the left {@link RectHV} object for the node
      * @param point the {@link Point2D} to build the rect
      * @param parent parent rect
-     * @param left if the node is the left point
      * @param horizontal if the node is oriented horizontally
      * @return the {@link RectHV}
      */
-    private RectHV rect(Point2D point, RectHV parent, boolean left, boolean horizontal) {
-        if (left) {
-            if (horizontal) return new RectHV(parent.xmin(), parent.ymin(), point.x(), parent.ymax());
-            else            return new RectHV(parent.xmin(), parent.ymin(), parent.xmax(), point.y());
-        }
-        else {
-            if (horizontal) return new RectHV(point.x(), parent.ymin(), parent.xmax(), parent.ymax());
-            else            return new RectHV(parent.xmin(), point.y(), parent.xmax(), parent.ymax());
-        }
+    private RectHV leftRect(Point2D point, RectHV parent, boolean horizontal) {
+        if (horizontal) return new RectHV(parent.xmin(), parent.ymin(), point.x(), parent.ymax());
+        else            return new RectHV(parent.xmin(), parent.ymin(), parent.xmax(), point.y());
+    }
+
+    /**
+     * Returns the right {@link RectHV} object for the node
+     * @param point the {@link Point2D} to build the rect
+     * @param parent parent rect
+     * @param horizontal if the node is oriented horizontally
+     * @return the {@link RectHV}
+     */
+    private RectHV rightRect(Point2D point, RectHV parent, boolean horizontal) {
+        if (horizontal) return new RectHV(point.x(), parent.ymin(), parent.xmax(), parent.ymax());
+        else            return new RectHV(parent.xmin(), point.y(), parent.xmax(), parent.ymax());
     }
 
     public static void main(String[] args) {
