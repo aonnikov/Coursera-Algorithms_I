@@ -1,10 +1,11 @@
+import com.sun.org.apache.regexp.internal.RE;
 import edu.princeton.cs.algs4.Point2D;
 import edu.princeton.cs.algs4.RectHV;
 import edu.princeton.cs.algs4.StdDraw;
 
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Set;
+import java.util.List;
 
 /**
  * A mutable data type that represents a set of points in the unit square.
@@ -72,22 +73,16 @@ public class KdTree {
      * @param node the {@link KdNode}
      * @param point the {@link Point2D}
      * @param horizontal true if the orientation is horizontal
+     * @param rect the node rect
      */
     private KdNode insert(KdNode node, Point2D point, boolean horizontal, RectHV rect) {
         if (node == null) return new KdNode(point, rect);
 
         boolean left = isLeft(node, point, horizontal);
+        rect = rect(point, rect, left, horizontal);
 
-        if (left) {
-            if (horizontal) rect = new RectHV(rect.xmin(), rect.ymin(), node.point.x(), rect.ymax());
-            else            rect = new RectHV(rect.xmin(), rect.ymin(), rect.xmax(), node.point.y());
-            node.left  = insert(node.left,  point, !horizontal, rect);
-        }
-        else {
-            if (horizontal) rect = new RectHV(node.point.x(), rect.ymin(), rect.xmax(), rect.ymax());
-            else            rect = new RectHV(rect.xmin(), node.point.y(), rect.xmax(), rect.ymax());
-            node.right = insert(node.right, point, !horizontal, rect);
-        }
+        if (left) node.left  = insert(node.left,  point, !horizontal, rect);
+        else      node.right = insert(node.right, point, !horizontal, rect);
 
         return node;
     }
@@ -173,26 +168,26 @@ public class KdTree {
             throw new IllegalArgumentException("Rectangle must be not null!");
         }
 
-        return range(this.root, rect, new HashSet<>(), true);
+        return range(this.root, rect, new ArrayList<>(), true);
     }
 
-    private Iterable<Point2D> range(KdNode node, RectHV rect, Set<Point2D> pointSet, boolean horizontal) {
-        if (node == null) return pointSet;
+    private Iterable<Point2D> range(KdNode node, RectHV rect, List<Point2D> points, boolean horizontal) {
+        if (node == null) return points;
 
         if (rect.contains(node.point)) {
-            pointSet.add(node.point);
+            points.add(node.point);
         }
 
         if (horizontal) {
-            if (rect.xmin() < node.point.x())  range(node.left,  rect, pointSet, !horizontal);
-            if (rect.xmax() >= node.point.x()) range(node.right, rect, pointSet, !horizontal);
+            if (rect.xmin() < node.point.x())  range(node.left,  rect, points, !horizontal);
+            if (rect.xmax() >= node.point.x()) range(node.right, rect, points, !horizontal);
         }
         else {
-            if (rect.ymin() < node.point.y())  range(node.left,  rect, pointSet, !horizontal);
-            if (rect.ymax() >= node.point.y()) range(node.right, rect, pointSet, !horizontal);
+            if (rect.ymin() < node.point.y())  range(node.left,  rect, points, !horizontal);
+            if (rect.ymax() >= node.point.y()) range(node.right, rect, points, !horizontal);
         }
 
-        return pointSet;
+        return points;
     }
 
     /**
@@ -202,7 +197,7 @@ public class KdTree {
      */
     public Point2D nearest(Point2D point) {
         if (point == null) throw new IllegalArgumentException("Point must be not null!");
-        if (this.root == null) throw new IllegalArgumentException("Tree is empty!");
+        if (this.isEmpty()) return null;
 
         return nearest(this.root, point, true);
     }
@@ -225,9 +220,35 @@ public class KdTree {
         return node.point;
     }
 
+    /**
+     * Returns true if the node is left
+     * @param node the {@link KdNode}
+     * @param point the {@link Point2D}
+     * @param horizontal if the node is oriented horizontally
+     * @return true if the node is left
+     */
     private boolean isLeft(KdNode node, Point2D point, boolean horizontal) {
         if (horizontal) return point.x() < node.point.x();
         else            return point.y() < node.point.y();
+    }
+
+    /**
+     * Returns the {@link RectHV} object for the node
+     * @param point the {@link Point2D} to build the rect
+     * @param parent parent rect
+     * @param left if the node is the left point
+     * @param horizontal if the node is oriented horizontally
+     * @return the {@link RectHV}
+     */
+    private RectHV rect(Point2D point, RectHV parent, boolean left, boolean horizontal) {
+        if (left) {
+            if (horizontal) return new RectHV(parent.xmin(), parent.ymin(), point.x(), parent.ymax());
+            else            return new RectHV(parent.xmin(), parent.ymin(), parent.xmax(), point.y());
+        }
+        else {
+            if (horizontal) return new RectHV(point.x(), parent.ymin(), parent.xmax(), parent.ymax());
+            else            return new RectHV(parent.xmin(), point.y(), parent.xmax(), parent.ymax());
+        }
     }
 
     public static void main(String[] args) {
@@ -282,7 +303,17 @@ public class KdTree {
 
         assert  tree.nearest(new Point2D(0.0, 0.0)).equals(point2);
         assert  tree.nearest(new Point2D(0.7, 0.2)).equals(point0);
-        tree.draw();
+
+        tree = new KdTree();
+        tree.insert(new Point2D(0.7, 0.2));
+        tree.insert(new Point2D(0.5, 0.4));
+        tree.insert(new Point2D(0.2, 0.3));
+        tree.insert(new Point2D(0.4, 0.7));
+        tree.insert(new Point2D(0.9, 0.6));
+
+        Point2D nearest = tree.nearest(new Point2D(0.016, 0.605));
+        System.out.println(nearest);
+        assert nearest.equals(new Point2D(0.2, 3));
     }
 
 }
